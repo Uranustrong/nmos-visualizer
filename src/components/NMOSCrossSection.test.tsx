@@ -5,6 +5,81 @@ import { deriveMosfetState } from '../model/mosfetModel'
 import { NMOSCrossSection } from './NMOSCrossSection'
 
 describe('NMOSCrossSection', () => {
+  it('aligns the oxide, inversion channel, and substrate surface', () => {
+    render(
+      <NMOSCrossSection
+        state={deriveMosfetState({ vgs: 1.5, vds: 0.5, vt: 0.5 })}
+      />,
+    )
+
+    const oxide = screen.getByTestId('gate-oxide')
+    const channel = screen.getByTestId('inversion-channel')
+    const substrate = screen.getByTestId('substrate')
+    const oxideBottom = Number(oxide.getAttribute('y')) + Number(oxide.getAttribute('height'))
+
+    expect(oxideBottom).toBe(Number(channel.getAttribute('data-interface-y')))
+    expect(oxideBottom).toBe(Number(substrate.getAttribute('data-surface-y')))
+  })
+
+  it('wraps depletion regions around both source and drain pn junctions', () => {
+    render(
+      <NMOSCrossSection
+        state={deriveMosfetState({ vgs: 1.5, vds: 1, vt: 0.5 })}
+      />,
+    )
+
+    expect(screen.getByTestId('source-junction-depletion')).toHaveAttribute(
+      'data-wraps-junction',
+      'sidewalls-and-bottom',
+    )
+    expect(screen.getByTestId('drain-junction-depletion')).toHaveAttribute(
+      'data-wraps-junction',
+      'sidewalls-and-bottom',
+    )
+    expect(screen.getByTestId('gate-depletion')).toBeInTheDocument()
+  })
+
+  it('widens drain junction depletion as VDS rises without changing source depletion', () => {
+    const { rerender } = render(
+      <NMOSCrossSection
+        state={deriveMosfetState({ vgs: 1.5, vds: 0.5, vt: 0.5 })}
+      />,
+    )
+    const sourceExtent = Number(
+      screen.getByTestId('source-junction-depletion').getAttribute('data-p-side-extent'),
+    )
+    const lowDrainExtent = Number(
+      screen.getByTestId('drain-junction-depletion').getAttribute('data-p-side-extent'),
+    )
+
+    rerender(
+      <NMOSCrossSection
+        state={deriveMosfetState({ vgs: 1.5, vds: 3, vt: 0.5 })}
+      />,
+    )
+
+    expect(
+      Number(screen.getByTestId('source-junction-depletion').getAttribute('data-p-side-extent')),
+    ).toBe(sourceExtent)
+    expect(
+      Number(screen.getByTestId('drain-junction-depletion').getAttribute('data-p-side-extent')),
+    ).toBeGreaterThan(lowDrainExtent)
+  })
+
+  it('shows live VGS and VDS voltage sources with ground references', () => {
+    render(
+      <NMOSCrossSection
+        state={deriveMosfetState({ vgs: 1.5, vds: 0.5, vt: 0.5 })}
+      />,
+    )
+
+    expect(screen.getByLabelText('VGS voltage source')).toBeInTheDocument()
+    expect(screen.getByLabelText('VDS voltage source')).toBeInTheDocument()
+    expect(screen.getByText('VGS 1.50 V')).toBeInTheDocument()
+    expect(screen.getByText('VDS 0.50 V')).toBeInTheDocument()
+    expect(screen.getAllByLabelText('Ground reference')).toHaveLength(3)
+  })
+
   it('shows the qualitative weak-inversion state below threshold', () => {
     render(
       <NMOSCrossSection

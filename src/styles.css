@@ -136,19 +136,54 @@ input {
   fill: var(--ink);
 }
 
-.device-metal {
-  fill: var(--ink);
-  stroke: var(--ink);
-  stroke-width: 2;
-}
-
-.device-metal path {
+.bias-circuit path,
+.body-contact > path {
   fill: none;
+  stroke: var(--ink);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
 }
 
-.depletion-region {
+.voltage-source circle {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1.6;
+}
+
+.voltage-source text {
+  fill: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.voltage-source .polarity {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.voltage-source .supply-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.ground-reference path {
+  fill: none;
+  stroke: var(--ink);
+  stroke-linecap: round;
+  stroke-width: 1.4;
+}
+
+.gate-depletion {
   fill: url(#depletion-hatch);
   stroke: var(--line-dark);
+  stroke-width: 1;
+  transition: d 180ms ease;
+}
+
+.pn-depletion {
+  fill: url(#junction-hatch);
+  stroke: #797f84;
   stroke-width: 1;
   transition: d 180ms ease;
 }
@@ -156,6 +191,18 @@ input {
 #depletion-hatch path {
   stroke: #b5b8b3;
   stroke-width: 0.8;
+}
+
+#junction-hatch path {
+  stroke: #8f959a;
+  stroke-width: 1;
+}
+
+.junction-rim {
+  fill: none;
+  stroke: #f8f8f5;
+  stroke-dasharray: 3 3;
+  stroke-width: 2;
 }
 
 .pinch-wedge {
@@ -231,7 +278,7 @@ input {
 .diagram-legend {
   display: flex;
   justify-content: flex-end;
-  gap: 22px;
+  gap: 14px;
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 10px;
@@ -268,6 +315,10 @@ input {
   height: 9px;
   border: 1px solid var(--line-dark);
   background: repeating-linear-gradient(-45deg, transparent 0 3px, var(--line) 3px 4px);
+}
+
+.legend-swatch--pn {
+  background: repeating-linear-gradient(-45deg, transparent 0 2px, #92979c 2px 3px);
 }
 
 .chart-grid line {

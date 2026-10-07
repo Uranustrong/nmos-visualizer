@@ -7,16 +7,20 @@ interface NMOSCrossSectionProps {
 }
 
 const HOLES = [
-  [46, 304], [93, 341], [142, 292], [188, 360], [237, 321], [287, 366],
-  [337, 309], [388, 351], [439, 297], [488, 368], [538, 323], [586, 354],
-  [633, 295], [677, 342], [72, 379], [162, 398], [267, 398], [368, 389],
-  [474, 405], [574, 394], [659, 386],
+  [70, 346], [119, 393], [173, 352], [218, 421], [278, 371], [334, 429],
+  [390, 384], [448, 421], [508, 358], [563, 415], [621, 365], [681, 424],
+  [742, 350], [92, 438], [192, 378], [306, 337], [420, 446], [536, 452],
+  [650, 458], [733, 397],
 ] as const
 
+const SURFACE_Y = 230
+const OXIDE_Y = 204
+const OXIDE_HEIGHT = SURFACE_Y - OXIDE_Y
+const CHANNEL_START_X = 250
+const CHANNEL_LENGTH = 320
 const MAX_OVERDRIVE = 2.8
-const CHANNEL_START_X = 210
-const CHANNEL_LENGTH = 300
-const SURFACE_Y = 190
+const SOURCE = { left: 105, right: 250, bottom: 315 }
+const DRAIN = { left: 570, right: 715, bottom: 315 }
 
 const createChannelPath = (state: MosfetState) => {
   if (state.channelProfile.length === 0) return ''
@@ -35,10 +39,37 @@ const createChannelPath = (state: MosfetState) => {
   return `M ${top} L ${bottom} Z`
 }
 
+const junctionShape = ({ left, right, bottom }: typeof SOURCE) =>
+  `M ${left} ${SURFACE_Y} H ${right} V ${bottom - 16} Q ${right} ${bottom} ${
+    right - 16
+  } ${bottom} H ${left + 16} Q ${left} ${bottom} ${left} ${bottom - 16} Z`
+
+const pSideDepletionShape = (
+  { left, right, bottom }: typeof SOURCE,
+  extent: number,
+) =>
+  `M ${left - extent} ${SURFACE_Y} H ${right + extent} V ${bottom - 12} Q ${
+    right + extent
+  } ${bottom + extent} ${right - 12} ${bottom + extent} H ${left + 12} Q ${
+    left - extent
+  } ${bottom + extent} ${left - extent} ${bottom - 12} Z`
+
+function GroundReference({ x, y }: { x: number; y: number }) {
+  return (
+    <g className="ground-reference" aria-label="Ground reference">
+      <path d={`M ${x} ${y - 13} V ${y} M ${x - 13} ${y} H ${x + 13} M ${
+        x - 9
+      } ${y + 6} H ${x + 9} M ${x - 4} ${y + 12} H ${x + 4}`} />
+    </g>
+  )
+}
+
 export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
   const { inputs, region, isWeakInversion, channelEnd, normalizedId } = state
-  const depletionProgress = Math.min(inputs.vgs / inputs.vt, 1)
-  const depletionDepth = 28 + depletionProgress * 58
+  const gateDepletionProgress = Math.min(inputs.vgs / inputs.vt, 1)
+  const gateDepletionDepth = 6 + gateDepletionProgress * 54
+  const sourceDepletionExtent = 22
+  const drainDepletionExtent = 22 + (inputs.vds / 3) * 20
   const channelPath = createChannelPath(state)
   const pinchX = CHANNEL_START_X + channelEnd * CHANNEL_LENGTH
   const electronCount = Math.max(
@@ -55,19 +86,23 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
 
       <svg
         className="cross-section__svg"
-        viewBox="0 0 720 430"
+        viewBox="0 0 820 500"
         role="img"
         aria-labelledby="cross-section-title cross-section-description"
       >
-        <title id="cross-section-title">Interactive NMOS cross-section</title>
+        <title id="cross-section-title">Interactive NMOS cross-section and bias circuit</title>
         <desc id="cross-section-description">
-          The gate voltage repels holes and forms an electron inversion channel.
-          Drain voltage tapers that channel toward pinch-off.
+          Gate and drain voltage sources bias an NMOS device. Junction depletion wraps around
+          the source and drain, while the gate creates a separate surface depletion region and
+          an inversion channel directly beneath the oxide.
         </desc>
 
         <defs>
           <pattern id="depletion-hatch" width="12" height="12" patternUnits="userSpaceOnUse">
             <path d="M -2 2 L 2 -2 M 0 12 L 12 0 M 10 14 L 14 10" />
+          </pattern>
+          <pattern id="junction-hatch" width="9" height="9" patternUnits="userSpaceOnUse">
+            <path d="M 0 9 L 9 0" />
           </pattern>
           <filter id="electron-glow" x="-100%" y="-100%" width="300%" height="300%">
             <feGaussianBlur stdDeviation="2.2" result="blur" />
@@ -78,32 +113,106 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
           </filter>
         </defs>
 
-        <g className="device-metal">
-          <path d="M 120 126 V 78 H 82" />
-          <path d="M 600 126 V 78 H 638" />
-          <path d="M 360 60 V 28" />
-          <circle cx="82" cy="78" r="4" />
-          <circle cx="638" cy="78" r="4" />
-          <circle cx="360" cy="28" r="4" />
+        <g className="bias-circuit">
+          <g aria-label="VGS voltage source" className="voltage-source voltage-source--gate">
+            <path d="M 70 177 V 70 H 211 M 259 70 H 410 V 139" />
+            <circle cx="235" cy="70" r="24" />
+            <text className="polarity" x="224" y="75" textAnchor="middle">−</text>
+            <text className="polarity" x="246" y="75" textAnchor="middle">+</text>
+            <text className="supply-label" x="235" y="31" textAnchor="middle">
+              VGS {inputs.vgs.toFixed(2)} V
+            </text>
+          </g>
+          <g aria-label="VDS voltage source" className="voltage-source voltage-source--drain">
+            <path d="M 643 230 V 94 H 752 V 121 M 752 169 V 189" />
+            <circle cx="752" cy="145" r="24" />
+            <text className="polarity" x="752" y="138" textAnchor="middle">+</text>
+            <text className="polarity" x="752" y="160" textAnchor="middle">−</text>
+            <text className="supply-label" x="752" y="56" textAnchor="middle">
+              VDS {inputs.vds.toFixed(2)} V
+            </text>
+          </g>
+          <path className="source-wire" d="M 178 230 V 177 H 70" />
+          <GroundReference x={70} y={190} />
+          <GroundReference x={752} y={202} />
         </g>
 
-        <rect className="substrate" x="28" y="190" width="664" height="222" rx="4" />
-        <path
-          className="depletion-region"
-          d={`M 188 190 H 532 V ${190 + depletionDepth} C 458 ${
-            216 + depletionDepth
-          }, 263 ${216 + depletionDepth}, 188 ${190 + depletionDepth} Z`}
+        <rect
+          className="substrate"
+          data-testid="substrate"
+          data-surface-y={SURFACE_Y}
+          x="45"
+          y={SURFACE_Y}
+          width="730"
+          height="225"
+          rx="4"
         />
 
-        <rect className="junction" x="70" y="126" width="140" height="100" rx="8" />
-        <rect className="junction" x="510" y="126" width="140" height="100" rx="8" />
-        <rect className="oxide" x="210" y="148" width="300" height="22" rx="2" />
-        <rect className="gate" x="264" y="60" width="192" height="80" rx="4" />
+        <path
+          className="pn-depletion pn-depletion--source"
+          data-testid="source-junction-depletion"
+          data-wraps-junction="sidewalls-and-bottom"
+          data-p-side-extent={sourceDepletionExtent}
+          d={pSideDepletionShape(SOURCE, sourceDepletionExtent)}
+        />
+        <path
+          className="pn-depletion pn-depletion--drain"
+          data-testid="drain-junction-depletion"
+          data-wraps-junction="sidewalls-and-bottom"
+          data-p-side-extent={drainDepletionExtent}
+          d={pSideDepletionShape(DRAIN, drainDepletionExtent)}
+        />
+
+        <path
+          className="gate-depletion"
+          data-testid="gate-depletion"
+          d={`M ${CHANNEL_START_X} ${SURFACE_Y} H ${CHANNEL_START_X + CHANNEL_LENGTH} V ${
+            SURFACE_Y + gateDepletionDepth
+          } C 510 ${SURFACE_Y + gateDepletionDepth + 17}, 310 ${
+            SURFACE_Y + gateDepletionDepth + 17
+          }, ${CHANNEL_START_X} ${SURFACE_Y + gateDepletionDepth} Z`}
+        />
+
+        <path className="junction" d={junctionShape(SOURCE)} />
+        <path className="junction" d={junctionShape(DRAIN)} />
+        <path
+          className="junction-rim"
+          d={`M ${SOURCE.left + 7} ${SURFACE_Y + 7} V ${SOURCE.bottom - 18} Q ${
+            SOURCE.left + 7
+          } ${SOURCE.bottom - 7} ${SOURCE.left + 18} ${SOURCE.bottom - 7} H ${
+            SOURCE.right - 18
+          } Q ${SOURCE.right - 7} ${SOURCE.bottom - 7} ${SOURCE.right - 7} ${
+            SOURCE.bottom - 18
+          } V ${SURFACE_Y + 7}`}
+        />
+        <path
+          className="junction-rim"
+          d={`M ${DRAIN.left + 7} ${SURFACE_Y + 7} V ${DRAIN.bottom - 18} Q ${
+            DRAIN.left + 7
+          } ${DRAIN.bottom - 7} ${DRAIN.left + 18} ${DRAIN.bottom - 7} H ${
+            DRAIN.right - 18
+          } Q ${DRAIN.right - 7} ${DRAIN.bottom - 7} ${DRAIN.right - 7} ${
+            DRAIN.bottom - 18
+          } V ${SURFACE_Y + 7}`}
+        />
+
+        <rect
+          className="oxide"
+          data-testid="gate-oxide"
+          x={CHANNEL_START_X}
+          y={OXIDE_Y}
+          width={CHANNEL_LENGTH}
+          height={OXIDE_HEIGHT}
+          rx="2"
+        />
+        <rect className="gate" x="300" y="139" width="220" height="65" rx="4" />
 
         {region === 'saturation' && (
           <path
             className="pinch-wedge"
-            d={`M ${pinchX} 190 L 510 190 L 510 258 Q ${pinchX + 30} 242 ${pinchX} 190 Z`}
+            d={`M ${pinchX} ${SURFACE_Y} L ${DRAIN.left} ${SURFACE_Y} L ${
+              DRAIN.left
+            } 282 Q ${pinchX + 28} 269 ${pinchX} ${SURFACE_Y} Z`}
           />
         )}
 
@@ -112,6 +221,7 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
             className="inversion-channel"
             data-testid="inversion-channel"
             data-channel-end={channelEnd}
+            data-interface-y={SURFACE_Y}
             d={channelPath}
           />
         )}
@@ -121,8 +231,8 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
             {Array.from({ length: 10 }, (_, index) => (
               <circle
                 key={index}
-                cx={226 + index * 29}
-                cy={188 + (index % 2) * 4}
+                cx={267 + index * 31}
+                cy={SURFACE_Y + 3 + (index % 2) * 3}
                 r="2.4"
               />
             ))}
@@ -155,8 +265,10 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
 
         <g className="holes" aria-hidden="true">
           {HOLES.map(([x, y], index) => {
-            const underGate = x > 185 && x < 535 && y < 340
-            const opacity = underGate ? Math.max(0.06, 1 - depletionProgress * 1.15) : 0.68
+            const underGate = x > 240 && x < 580 && y < 345
+            const opacity = underGate
+              ? Math.max(0.06, 1 - gateDepletionProgress * 1.15)
+              : 0.68
             return (
               <g key={index} transform={`translate(${x} ${y})`} opacity={opacity}>
                 <circle r="7" />
@@ -167,41 +279,49 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
         </g>
 
         <g className="device-labels">
-          <text x="120" y="62" textAnchor="middle">SOURCE</text>
-          <text x="600" y="62" textAnchor="middle">DRAIN</text>
-          <text x="360" y="48" textAnchor="middle">GATE</text>
-          <text x="140" y="183" textAnchor="middle">n+</text>
-          <text x="580" y="183" textAnchor="middle">n+</text>
-          <text x="360" y="132" textAnchor="middle">metal</text>
-          <text x="360" y="165" textAnchor="middle">oxide</text>
-          <text x="360" y="388" textAnchor="middle">p-type substrate</text>
+          <text x="178" y="218" textAnchor="middle">SOURCE</text>
+          <text x="643" y="218" textAnchor="middle">DRAIN</text>
+          <text x="410" y="130" textAnchor="middle">GATE</text>
+          <text x="178" y="274" textAnchor="middle">n+</text>
+          <text x="643" y="274" textAnchor="middle">n+</text>
+          <text x="410" y="179" textAnchor="middle">metal</text>
+          <text x="410" y="221" textAnchor="middle">oxide</text>
+          <text x="410" y="434" textAnchor="middle">p-type substrate</text>
         </g>
 
         <g className="diagram-annotations">
-          <path d={`M 370 ${245 + depletionProgress * 30} L 430 294`} />
-          <text x="438" y="300">Depletion region</text>
+          <path d={`M 401 ${SURFACE_Y + gateDepletionDepth + 6} L 445 329`} />
+          <text x="451" y="334">Gate-induced depletion</text>
+          <path d="M 135 326 L 95 355" />
+          <text x="58" y="371">PN depletion</text>
           {channelPath && (
             <>
-              <path d="M 286 209 L 246 238" />
-              <text x="235" y="253">Inversion channel</text>
+              <path d="M 322 246 L 289 275" />
+              <text x="278" y="291">Inversion channel</text>
             </>
           )}
           {isWeakInversion && (
-            <text x="360" y="236" textAnchor="middle">Qualitative weak inversion</text>
+            <text x="410" y="263" textAnchor="middle">Qualitative weak inversion</text>
           )}
           {region === 'saturation' && (
             <>
-              <path d={`M ${pinchX + 8} 204 L ${pinchX + 35} 238`} />
-              <text x={pinchX + 41} y="253">Pinch-off region</text>
+              <path d={`M ${pinchX + 8} 242 L ${pinchX + 34} 273`} />
+              <text x={Math.min(pinchX + 40, 520)} y="288">Pinch-off region</text>
             </>
           )}
         </g>
+
+        <g className="body-contact">
+          <path d="M 410 455 V 469" />
+          <GroundReference x={410} y={469} />
+        </g>
       </svg>
 
-      <div className="diagram-legend" aria-label="Carrier legend">
+      <div className="diagram-legend" aria-label="Carrier and region legend">
         <span><i className="legend-dot legend-dot--electron" />Electron</span>
         <span><i className="legend-dot legend-dot--hole">+</i>Hole</span>
-        <span><i className="legend-swatch" />Depletion</span>
+        <span><i className="legend-swatch legend-swatch--pn" />PN depletion</span>
+        <span><i className="legend-swatch" />Gate depletion</span>
       </div>
     </figure>
   )
