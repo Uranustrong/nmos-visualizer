@@ -21,9 +21,8 @@ const CHANNEL_LENGTH = 320
 const MAX_OVERDRIVE = 2.8
 const SOURCE = { left: 105, right: 250, bottom: 315 }
 const DRAIN = { left: 570, right: 715, bottom: 315 }
-const PINCH_REGION_START_X = DRAIN.left - 44
-const SATURATION_INVERSION_END =
-  (PINCH_REGION_START_X - CHANNEL_START_X) / CHANNEL_LENGTH
+const MAX_PINCH_REGION_LENGTH = 44
+const PINCH_GROWTH_VOLTS = 0.45
 
 const createChannelPath = (state: MosfetState, inversionEnd: number) => {
   if (state.channelProfile.length === 0) return ''
@@ -78,8 +77,17 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
   const gateDepletionDepth = 6 + gateDepletionProgress * 54
   const sourceDepletionExtent = 22
   const drainDepletionExtent = 22 + (inputs.vds / 3) * 20
+  const excessDrainVoltage = Math.max(inputs.vds - state.overdrive, 0)
+  const pinchProgress =
+    region === 'saturation'
+      ? 1 - Math.exp(-excessDrainVoltage / PINCH_GROWTH_VOLTS)
+      : 0
+  const pinchRegionLength = MAX_PINCH_REGION_LENGTH * pinchProgress
+  const pinchRegionStartX = DRAIN.left - pinchRegionLength
   const inversionEnd =
-    region === 'saturation' ? SATURATION_INVERSION_END : channelEnd
+    region === 'saturation'
+      ? (pinchRegionStartX - CHANNEL_START_X) / CHANNEL_LENGTH
+      : channelEnd
   const channelPath = createChannelPath(state, inversionEnd)
   const electronCount = Math.max(
     7,
@@ -232,9 +240,12 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
         {region === 'saturation' && (
           <path
             className="pinch-wedge"
-            d={`M ${PINCH_REGION_START_X} ${SURFACE_Y} L ${DRAIN.left} ${SURFACE_Y} L ${
+            data-pinch-progress={pinchProgress}
+            d={`M ${pinchRegionStartX} ${SURFACE_Y} L ${DRAIN.left} ${SURFACE_Y} L ${
               DRAIN.left
-            } 282 Q ${PINCH_REGION_START_X + 24} 269 ${PINCH_REGION_START_X} ${
+            } 282 Q ${pinchRegionStartX + pinchRegionLength * 0.55} 269 ${
+              pinchRegionStartX
+            } ${
               SURFACE_Y
             } Z`}
           />
@@ -294,7 +305,7 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
           </g>
         )}
 
-        {region === 'saturation' && (
+        {region === 'saturation' && pinchRegionLength > 1 && (
           <g
             className="pinch-off-carriers"
             data-testid="pinch-off-carriers"
@@ -312,7 +323,7 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
                 <circle
                   key={index}
                   className="electron electron--high-field"
-                  cx={PINCH_REGION_START_X + progress * (DRAIN.left - PINCH_REGION_START_X)}
+                  cx={pinchRegionStartX + progress * pinchRegionLength}
                   cy={SURFACE_Y + 4 + (index % 2) * 4}
                   r="2.7"
                   style={style}
@@ -362,12 +373,12 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
           {isWeakInversion && (
             <text x="410" y="263" textAnchor="middle">Qualitative weak inversion</text>
           )}
-          {region === 'saturation' && (
+          {region === 'saturation' && pinchRegionLength > 10 && (
             <>
-              <path d={`M ${PINCH_REGION_START_X + 8} 242 L ${
-                PINCH_REGION_START_X + 32
+              <path d={`M ${pinchRegionStartX + 8} 242 L ${
+                pinchRegionStartX + 32
               } 273`} />
-              <text x={PINCH_REGION_START_X - 5} y="288">Pinch-off region</text>
+              <text x={pinchRegionStartX - 5} y="288">Pinch-off region</text>
             </>
           )}
         </g>

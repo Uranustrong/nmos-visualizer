@@ -155,4 +155,38 @@ describe('NMOSCrossSection', () => {
       channelCarriers.querySelectorAll('circle').length,
     )
   })
+
+  it('grows the pinch-off region continuously from zero width at saturation onset', () => {
+    const { rerender } = render(
+      <NMOSCrossSection
+        state={deriveMosfetState({ vgs: 1.5, vds: 1, vt: 0.5 })}
+      />,
+    )
+    const atBoundary = Number(
+      screen.getByTestId('inversion-channel').getAttribute('data-inversion-end'),
+    )
+
+    rerender(
+      <NMOSCrossSection
+        state={deriveMosfetState({ vgs: 1.5, vds: 1.05, vt: 0.5 })}
+      />,
+    )
+    const justAboveBoundary = Number(
+      screen.getByTestId('inversion-channel').getAttribute('data-inversion-end'),
+    )
+
+    rerender(
+      <NMOSCrossSection
+        state={deriveMosfetState({ vgs: 1.5, vds: 3, vt: 0.5 })}
+      />,
+    )
+    const highDrainVoltage = Number(
+      screen.getByTestId('inversion-channel').getAttribute('data-inversion-end'),
+    )
+
+    expect(atBoundary).toBe(1)
+    expect(justAboveBoundary).toBeLessThan(1)
+    expect(justAboveBoundary).toBeGreaterThan(0.98)
+    expect(highDrainVoltage).toBeLessThan(justAboveBoundary)
+  })
 })

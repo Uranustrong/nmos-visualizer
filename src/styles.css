@@ -209,6 +209,7 @@ input {
   fill: rgba(248, 248, 245, 0.76);
   stroke: var(--line-dark);
   stroke-dasharray: 4 4;
+  transition: d 180ms ease;
 }
 
 .inversion-channel {
