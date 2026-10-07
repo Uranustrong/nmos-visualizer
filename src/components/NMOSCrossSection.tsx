@@ -22,18 +22,25 @@ const MAX_OVERDRIVE = 2.8
 const SOURCE = { left: 105, right: 250, bottom: 315 }
 const DRAIN = { left: 570, right: 715, bottom: 315 }
 const PINCH_REGION_START_X = DRAIN.left - 44
+const SATURATION_INVERSION_END =
+  (PINCH_REGION_START_X - CHANNEL_START_X) / CHANNEL_LENGTH
 
-const createChannelPath = (state: MosfetState) => {
+const createChannelPath = (state: MosfetState, inversionEnd: number) => {
   if (state.channelProfile.length === 0) return ''
 
   const top = state.channelProfile
-    .map((point) => `${CHANNEL_START_X + point.x * CHANNEL_LENGTH},${SURFACE_Y}`)
+    .map(
+      (point) =>
+        `${CHANNEL_START_X + point.x * inversionEnd * CHANNEL_LENGTH},${SURFACE_Y}`,
+    )
     .join(' L ')
   const bottom = [...state.channelProfile]
     .reverse()
     .map((point) => {
       const thickness = 3 + 18 * (point.charge / MAX_OVERDRIVE)
-      return `${CHANNEL_START_X + point.x * CHANNEL_LENGTH},${SURFACE_Y + thickness}`
+      return `${CHANNEL_START_X + point.x * inversionEnd * CHANNEL_LENGTH},${
+        SURFACE_Y + thickness
+      }`
     })
     .join(' L ')
 
@@ -71,7 +78,9 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
   const gateDepletionDepth = 6 + gateDepletionProgress * 54
   const sourceDepletionExtent = 22
   const drainDepletionExtent = 22 + (inputs.vds / 3) * 20
-  const channelPath = createChannelPath(state)
+  const inversionEnd =
+    region === 'saturation' ? SATURATION_INVERSION_END : channelEnd
+  const channelPath = createChannelPath(state, inversionEnd)
   const electronCount = Math.max(
     7,
     Math.round(8 + Math.min(state.overdrive / MAX_OVERDRIVE, 1) * 16),
@@ -166,11 +175,16 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
         <path
           className="gate-depletion"
           data-testid="gate-depletion"
+          data-bottom-edge="flat-with-edge-fringing"
           d={`M ${CHANNEL_START_X} ${SURFACE_Y} H ${CHANNEL_START_X + CHANNEL_LENGTH} V ${
-            SURFACE_Y + gateDepletionDepth
-          } C 510 ${SURFACE_Y + gateDepletionDepth + 17}, 310 ${
-            SURFACE_Y + gateDepletionDepth + 17
-          }, ${CHANNEL_START_X} ${SURFACE_Y + gateDepletionDepth} Z`}
+            SURFACE_Y + gateDepletionDepth - 10
+          } Q ${CHANNEL_START_X + CHANNEL_LENGTH} ${SURFACE_Y + gateDepletionDepth} ${
+            CHANNEL_START_X + CHANNEL_LENGTH - 10
+          } ${SURFACE_Y + gateDepletionDepth} H ${CHANNEL_START_X + 10} Q ${
+            CHANNEL_START_X
+          } ${SURFACE_Y + gateDepletionDepth} ${CHANNEL_START_X} ${
+            SURFACE_Y + gateDepletionDepth - 10
+          } Z`}
         />
 
         <path className="junction" d={junctionShape(SOURCE)} />
@@ -231,6 +245,8 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
             className="inversion-channel"
             data-testid="inversion-channel"
             data-channel-end={channelEnd}
+            data-inversion-end={inversionEnd}
+            data-transport-end={channelEnd}
             data-interface-y={SURFACE_Y}
             d={channelPath}
           />
@@ -250,11 +266,15 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
         )}
 
         {channelPath && (
-          <g className="channel-electrons" aria-hidden="true" filter="url(#electron-glow)">
+          <g
+            className="channel-electrons"
+            data-testid="channel-carriers"
+            aria-hidden="true"
+            filter="url(#electron-glow)"
+          >
             {Array.from({ length: electronCount }, (_, index) => {
               const progress = (index + 0.5) / electronCount
-              const transportEnd = region === 'saturation' ? 0.86 : channelEnd
-              const x = CHANNEL_START_X + progress * transportEnd * CHANNEL_LENGTH
+              const x = CHANNEL_START_X + progress * inversionEnd * CHANNEL_LENGTH
               const style = {
                 '--electron-delay': `${-(index % 8) * 0.22}s`,
                 '--electron-speed': `${Math.max(0.7, 2.4 - normalizedId * 0.35)}s`,
@@ -282,8 +302,8 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
             aria-label="Electrons swept across the pinch-off region to the drain"
             filter="url(#electron-glow)"
           >
-            {Array.from({ length: 6 }, (_, index) => {
-              const progress = (index + 0.5) / 6
+            {Array.from({ length: 2 }, (_, index) => {
+              const progress = (index + 0.5) / 2
               const style = {
                 '--electron-delay': `${-index * 0.11}s`,
               } as CSSProperties

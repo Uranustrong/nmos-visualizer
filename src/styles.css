@@ -242,7 +242,7 @@ input {
 }
 
 .electron--high-field {
-  animation: high-field-flow 0.66s linear var(--electron-delay) infinite;
+  animation: high-field-flow 0.42s linear var(--electron-delay) infinite;
 }
 
 .holes circle {

@@ -53,6 +53,19 @@ describe('NMOSCrossSection', () => {
     expect(screen.getByTestId('gate-depletion')).toBeInTheDocument()
   })
 
+  it('uses a flat central boundary with edge fringing for gate depletion', () => {
+    render(
+      <NMOSCrossSection
+        state={deriveMosfetState({ vgs: 1.5, vds: 0.5, vt: 0.5 })}
+      />,
+    )
+
+    expect(screen.getByTestId('gate-depletion')).toHaveAttribute(
+      'data-bottom-edge',
+      'flat-with-edge-fringing',
+    )
+  })
+
   it('widens drain junction depletion as VDS rises without changing source depletion', () => {
     const { rerender } = render(
       <NMOSCrossSection
@@ -128,10 +141,18 @@ describe('NMOSCrossSection', () => {
 
     const channel = screen.getByTestId('inversion-channel')
     expect(Number(channel.getAttribute('data-channel-end'))).toBe(1)
+    expect(channel).toHaveAttribute('data-inversion-end')
+    expect(Number(channel.getAttribute('data-inversion-end'))).toBeLessThan(1)
+    expect(channel).toHaveAttribute('data-transport-end', '1')
     expect(screen.getByText('Pinch-off region')).toBeInTheDocument()
-    expect(screen.getByTestId('pinch-off-carriers')).toHaveAttribute(
+    const channelCarriers = screen.getByTestId('channel-carriers')
+    const pinchOffCarriers = screen.getByTestId('pinch-off-carriers')
+    expect(pinchOffCarriers).toHaveAttribute(
       'data-flow-to-drain',
       'true',
+    )
+    expect(pinchOffCarriers.querySelectorAll('circle').length).toBeLessThan(
+      channelCarriers.querySelectorAll('circle').length,
     )
   })
 })
