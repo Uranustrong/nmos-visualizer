@@ -66,6 +66,45 @@ describe('NMOSCrossSection', () => {
     )
   })
 
+  it('starts gate depletion at zero, grows it nonlinearly, and caps it at threshold', () => {
+    const { rerender } = render(
+      <NMOSCrossSection
+        state={deriveMosfetState({ vgs: 0, vds: 0, vt: 0.8 })}
+      />,
+    )
+    expect(screen.queryByTestId('gate-depletion')).not.toBeInTheDocument()
+
+    rerender(
+      <NMOSCrossSection
+        state={deriveMosfetState({ vgs: 0.2, vds: 0, vt: 0.8 })}
+      />,
+    )
+    expect(screen.getByTestId('gate-depletion')).toHaveAttribute(
+      'data-depletion-depth',
+      '30',
+    )
+
+    rerender(
+      <NMOSCrossSection
+        state={deriveMosfetState({ vgs: 0.8, vds: 0, vt: 0.8 })}
+      />,
+    )
+    expect(screen.getByTestId('gate-depletion')).toHaveAttribute(
+      'data-depletion-depth',
+      '60',
+    )
+
+    rerender(
+      <NMOSCrossSection
+        state={deriveMosfetState({ vgs: 2, vds: 0, vt: 0.8 })}
+      />,
+    )
+    expect(screen.getByTestId('gate-depletion')).toHaveAttribute(
+      'data-depletion-depth',
+      '60',
+    )
+  })
+
   it('widens drain junction depletion as VDS rises without changing source depletion', () => {
     const { rerender } = render(
       <NMOSCrossSection

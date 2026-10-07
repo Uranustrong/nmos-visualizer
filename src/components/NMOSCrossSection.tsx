@@ -73,8 +73,9 @@ function GroundReference({ x, y }: { x: number; y: number }) {
 
 export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
   const { inputs, region, isWeakInversion, channelEnd, normalizedId } = state
-  const gateDepletionProgress = Math.min(inputs.vgs / inputs.vt, 1)
-  const gateDepletionDepth = 6 + gateDepletionProgress * 54
+  const gateDepletionProgress = state.gateDepletionProgress
+  const gateDepletionDepth = gateDepletionProgress * 60
+  const gateDepletionEdgeRadius = Math.min(10, gateDepletionDepth / 2)
   const sourceDepletionExtent = 22
   const drainDepletionExtent = 22 + (inputs.vds / 3) * 20
   const excessDrainVoltage = Math.max(inputs.vds - state.overdrive, 0)
@@ -180,20 +181,25 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
           d={pSideDepletionShape(DRAIN, drainDepletionExtent)}
         />
 
-        <path
-          className="gate-depletion"
-          data-testid="gate-depletion"
-          data-bottom-edge="flat-with-edge-fringing"
-          d={`M ${CHANNEL_START_X} ${SURFACE_Y} H ${CHANNEL_START_X + CHANNEL_LENGTH} V ${
-            SURFACE_Y + gateDepletionDepth - 10
-          } Q ${CHANNEL_START_X + CHANNEL_LENGTH} ${SURFACE_Y + gateDepletionDepth} ${
-            CHANNEL_START_X + CHANNEL_LENGTH - 10
-          } ${SURFACE_Y + gateDepletionDepth} H ${CHANNEL_START_X + 10} Q ${
-            CHANNEL_START_X
-          } ${SURFACE_Y + gateDepletionDepth} ${CHANNEL_START_X} ${
-            SURFACE_Y + gateDepletionDepth - 10
-          } Z`}
-        />
+        {gateDepletionDepth > 0 && (
+          <path
+            className="gate-depletion"
+            data-testid="gate-depletion"
+            data-bottom-edge="flat-with-edge-fringing"
+            data-depletion-depth={gateDepletionDepth}
+            d={`M ${CHANNEL_START_X} ${SURFACE_Y} H ${
+              CHANNEL_START_X + CHANNEL_LENGTH
+            } V ${SURFACE_Y + gateDepletionDepth - gateDepletionEdgeRadius} Q ${
+              CHANNEL_START_X + CHANNEL_LENGTH
+            } ${SURFACE_Y + gateDepletionDepth} ${
+              CHANNEL_START_X + CHANNEL_LENGTH - gateDepletionEdgeRadius
+            } ${SURFACE_Y + gateDepletionDepth} H ${
+              CHANNEL_START_X + gateDepletionEdgeRadius
+            } Q ${CHANNEL_START_X} ${SURFACE_Y + gateDepletionDepth} ${CHANNEL_START_X} ${
+              SURFACE_Y + gateDepletionDepth - gateDepletionEdgeRadius
+            } Z`}
+          />
+        )}
 
         <path className="junction" d={junctionShape(SOURCE)} />
         <path className="junction" d={junctionShape(DRAIN)} />
@@ -360,8 +366,12 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
         </g>
 
         <g className="diagram-annotations">
-          <path d={`M 401 ${SURFACE_Y + gateDepletionDepth + 6} L 445 329`} />
-          <text x="451" y="334">Gate-induced depletion</text>
+          {gateDepletionDepth > 0 && (
+            <>
+              <path d={`M 401 ${SURFACE_Y + gateDepletionDepth + 6} L 445 329`} />
+              <text x="451" y="334">Gate-induced depletion</text>
+            </>
+          )}
           <path d="M 135 326 L 95 355" />
           <text x="58" y="371">PN depletion</text>
           {channelPath && (

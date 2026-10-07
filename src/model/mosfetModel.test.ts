@@ -52,6 +52,13 @@ describe('deriveMosfetState', () => {
     expect(derive({ vgs: 0.8, vt: 0.7 }).isWeakInversion).toBe(false)
   })
 
+  it('grows gate depletion with a square-root trend and saturates at threshold', () => {
+    expect(derive({ vgs: 0, vt: 0.8 }).gateDepletionProgress).toBe(0)
+    expect(derive({ vgs: 0.2, vt: 0.8 }).gateDepletionProgress).toBeCloseTo(0.5)
+    expect(derive({ vgs: 0.8, vt: 0.8 }).gateDepletionProgress).toBe(1)
+    expect(derive({ vgs: 2, vt: 0.8 }).gateDepletionProgress).toBe(1)
+  })
+
   it('creates a monotonic non-negative triode channel profile', () => {
     const state = derive({ vgs: 1.5, vt: 0.5, vds: 0.5 })
     const charges = state.channelProfile.map((point) => point.charge)

@@ -25,6 +25,7 @@ export interface MosfetState {
   pinchOffVds: number | null
   isAtPinchOff: boolean
   isWeakInversion: boolean
+  gateDepletionProgress: number
   channelEnd: number
   channelProfile: ChannelPoint[]
 }
@@ -74,6 +75,9 @@ export const deriveMosfetState = (rawInputs: MosfetInputs): MosfetState => {
   const overdrive = Math.max(inputs.vgs - inputs.vt, 0)
   const isWeakInversion =
     inputs.vgs > 0.75 * inputs.vt && inputs.vgs <= inputs.vt
+  const gateDepletionProgress = Math.sqrt(
+    Math.min(inputs.vgs / inputs.vt, 1),
+  )
 
   let region: OperatingRegion = 'cutoff'
   let normalizedId = 0
@@ -99,6 +103,7 @@ export const deriveMosfetState = (rawInputs: MosfetInputs): MosfetState => {
     pinchOffVds,
     isAtPinchOff,
     isWeakInversion,
+    gateDepletionProgress,
     channelEnd,
     channelProfile: makeChannelProfile(
       region,
