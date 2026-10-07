@@ -21,6 +21,20 @@ describe('NMOSCrossSection', () => {
     expect(oxideBottom).toBe(Number(substrate.getAttribute('data-surface-y')))
   })
 
+  it('matches gate metal length and position to the oxide', () => {
+    render(
+      <NMOSCrossSection
+        state={deriveMosfetState({ vgs: 1.5, vds: 0.5, vt: 0.5 })}
+      />,
+    )
+
+    const oxide = screen.getByTestId('gate-oxide')
+    const metal = screen.getByTestId('gate-metal')
+
+    expect(metal).toHaveAttribute('x', oxide.getAttribute('x'))
+    expect(metal).toHaveAttribute('width', oxide.getAttribute('width'))
+  })
+
   it('wraps depletion regions around both source and drain pn junctions', () => {
     render(
       <NMOSCrossSection
@@ -113,7 +127,11 @@ describe('NMOSCrossSection', () => {
     )
 
     const channel = screen.getByTestId('inversion-channel')
-    expect(Number(channel.getAttribute('data-channel-end'))).toBeLessThan(1)
+    expect(Number(channel.getAttribute('data-channel-end'))).toBe(1)
     expect(screen.getByText('Pinch-off region')).toBeInTheDocument()
+    expect(screen.getByTestId('pinch-off-carriers')).toHaveAttribute(
+      'data-flow-to-drain',
+      'true',
+    )
   })
 })

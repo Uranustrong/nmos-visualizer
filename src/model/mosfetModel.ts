@@ -36,8 +36,6 @@ export interface OutputCurvePoint {
 }
 
 const CHANNEL_SAMPLE_COUNT = 25
-const PINCH_OFF_RETREAT_LIMIT = 0.18
-const PINCH_OFF_DECAY_VOLTS = 0.45
 const EPSILON = 1e-9
 
 const clamp = (value: number, min: number, max: number) => {
@@ -88,13 +86,7 @@ export const deriveMosfetState = (rawInputs: MosfetInputs): MosfetState => {
     normalizedId = (overdrive ** 2) / 2
   }
 
-  const excessDrainVoltage = Math.max(inputs.vds - overdrive, 0)
-  const retreat =
-    region === 'saturation'
-      ? PINCH_OFF_RETREAT_LIMIT *
-        (1 - Math.exp(-excessDrainVoltage / PINCH_OFF_DECAY_VOLTS))
-      : 0
-  const channelEnd = region === 'cutoff' ? 0 : 1 - retreat
+  const channelEnd = region === 'cutoff' ? 0 : 1
   const pinchOffVds = overdrive > 0 ? overdrive : null
   const isAtPinchOff =
     region === 'saturation' && Math.abs(inputs.vds - overdrive) <= EPSILON

@@ -21,6 +21,7 @@ const CHANNEL_LENGTH = 320
 const MAX_OVERDRIVE = 2.8
 const SOURCE = { left: 105, right: 250, bottom: 315 }
 const DRAIN = { left: 570, right: 715, bottom: 315 }
+const PINCH_REGION_START_X = DRAIN.left - 44
 
 const createChannelPath = (state: MosfetState) => {
   if (state.channelProfile.length === 0) return ''
@@ -71,7 +72,6 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
   const sourceDepletionExtent = 22
   const drainDepletionExtent = 22 + (inputs.vds / 3) * 20
   const channelPath = createChannelPath(state)
-  const pinchX = CHANNEL_START_X + channelEnd * CHANNEL_LENGTH
   const electronCount = Math.max(
     7,
     Math.round(8 + Math.min(state.overdrive / MAX_OVERDRIVE, 1) * 16),
@@ -205,14 +205,24 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
           height={OXIDE_HEIGHT}
           rx="2"
         />
-        <rect className="gate" x="300" y="139" width="220" height="65" rx="4" />
+        <rect
+          className="gate"
+          data-testid="gate-metal"
+          x={CHANNEL_START_X}
+          y="139"
+          width={CHANNEL_LENGTH}
+          height="65"
+          rx="4"
+        />
 
         {region === 'saturation' && (
           <path
             className="pinch-wedge"
-            d={`M ${pinchX} ${SURFACE_Y} L ${DRAIN.left} ${SURFACE_Y} L ${
+            d={`M ${PINCH_REGION_START_X} ${SURFACE_Y} L ${DRAIN.left} ${SURFACE_Y} L ${
               DRAIN.left
-            } 282 Q ${pinchX + 28} 269 ${pinchX} ${SURFACE_Y} Z`}
+            } 282 Q ${PINCH_REGION_START_X + 24} 269 ${PINCH_REGION_START_X} ${
+              SURFACE_Y
+            } Z`}
           />
         )}
 
@@ -243,7 +253,8 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
           <g className="channel-electrons" aria-hidden="true" filter="url(#electron-glow)">
             {Array.from({ length: electronCount }, (_, index) => {
               const progress = (index + 0.5) / electronCount
-              const x = CHANNEL_START_X + progress * channelEnd * CHANNEL_LENGTH
+              const transportEnd = region === 'saturation' ? 0.86 : channelEnd
+              const x = CHANNEL_START_X + progress * transportEnd * CHANNEL_LENGTH
               const style = {
                 '--electron-delay': `${-(index % 8) * 0.22}s`,
                 '--electron-speed': `${Math.max(0.7, 2.4 - normalizedId * 0.35)}s`,
@@ -255,6 +266,34 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
                   className={inputs.vds > 0 ? 'electron electron--moving' : 'electron electron--idle'}
                   cx={x}
                   cy={SURFACE_Y + 5 + (index % 3) * 3}
+                  r="2.7"
+                  style={style}
+                />
+              )
+            })}
+          </g>
+        )}
+
+        {region === 'saturation' && (
+          <g
+            className="pinch-off-carriers"
+            data-testid="pinch-off-carriers"
+            data-flow-to-drain="true"
+            aria-label="Electrons swept across the pinch-off region to the drain"
+            filter="url(#electron-glow)"
+          >
+            {Array.from({ length: 6 }, (_, index) => {
+              const progress = (index + 0.5) / 6
+              const style = {
+                '--electron-delay': `${-index * 0.11}s`,
+              } as CSSProperties
+
+              return (
+                <circle
+                  key={index}
+                  className="electron electron--high-field"
+                  cx={PINCH_REGION_START_X + progress * (DRAIN.left - PINCH_REGION_START_X)}
+                  cy={SURFACE_Y + 4 + (index % 2) * 4}
                   r="2.7"
                   style={style}
                 />
@@ -305,8 +344,10 @@ export function NMOSCrossSection({ state }: NMOSCrossSectionProps) {
           )}
           {region === 'saturation' && (
             <>
-              <path d={`M ${pinchX + 8} 242 L ${pinchX + 34} 273`} />
-              <text x={Math.min(pinchX + 40, 520)} y="288">Pinch-off region</text>
+              <path d={`M ${PINCH_REGION_START_X + 8} 242 L ${
+                PINCH_REGION_START_X + 32
+              } 273`} />
+              <text x={PINCH_REGION_START_X - 5} y="288">Pinch-off region</text>
             </>
           )}
         </g>

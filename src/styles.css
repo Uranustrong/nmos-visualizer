@@ -219,7 +219,8 @@ input {
 }
 
 .weak-inversion-electrons circle,
-.channel-electrons circle {
+.channel-electrons circle,
+.pinch-off-carriers circle {
   fill: var(--accent);
 }
 
@@ -238,6 +239,10 @@ input {
 
 .electron--idle {
   animation: electron-idle 1.8s ease-in-out var(--electron-delay) infinite alternate;
+}
+
+.electron--high-field {
+  animation: high-field-flow 0.66s linear var(--electron-delay) infinite;
 }
 
 .holes circle {
@@ -580,6 +585,13 @@ input {
 @keyframes electron-idle {
   from { transform: translateX(-1.5px); }
   to { transform: translateX(1.5px); }
+}
+
+@keyframes high-field-flow {
+  0% { transform: translateX(-7px); opacity: 0.2; }
+  25% { opacity: 1; }
+  75% { opacity: 1; }
+  100% { transform: translateX(7px); opacity: 0.2; }
 }
 
 @keyframes point-pulse {

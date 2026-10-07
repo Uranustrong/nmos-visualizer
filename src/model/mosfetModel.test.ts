@@ -62,11 +62,11 @@ describe('deriveMosfetState', () => {
     expect(charges.every((charge, index) => index === 0 || charge <= charges[index - 1])).toBe(true)
   })
 
-  it('limits saturation pinch-off retreat to 18 percent of channel length', () => {
+  it('keeps the ideal-model pinch-off boundary at the drain edge', () => {
     const state = derive({ vgs: 0.3, vt: 0.2, vds: 3 })
 
-    expect(state.channelEnd).toBeGreaterThanOrEqual(0.82)
-    expect(state.channelProfile.at(-1)?.x).toBeCloseTo(state.channelEnd)
+    expect(state.channelEnd).toBe(1)
+    expect(state.channelProfile.at(-1)?.x).toBe(1)
     expect(state.channelProfile.at(-1)?.charge).toBe(0)
   })
 
